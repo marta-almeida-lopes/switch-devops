@@ -1,0 +1,66 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '2.6.3'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'org.siouan.frontend-jdk11' version '6.0.0'
+    id 'war'
+}
+
+frontend {
+    nodeVersion = "14.17.3"
+    assembleScript = "run build"
+    cleanScript = "run clean"
+    checkScript = "run check"
+}
+
+group = 'com.greglturnquist'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-data-rest'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    runtimeOnly 'com.h2database:h2'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    implementation 'javax.validation:validation-api:2.0.1.Final'
+}
+
+task copyJar(type: Copy) {
+    from('build/libs') // path to the directory where the jar files are generated
+    into('dist') // path to the dist directory that will be located at the project root level
+    include('*.jar')
+}
+
+task cleanWebpack(type: Delete) {
+    description = 'Deletes all generated files by webpack'
+    delete fileTree(dir: "${projectDir}/src/main/resources/static/built/", include: ['**/*.js', '**/*.js.map'])
+    doLast {
+        println 'Webpack files deleted'
+    }
+}
+
+build.dependsOn copyJar
+copyJar.dependsOn jar
+copyJar.dependsOn bootJar
+clean.dependsOn cleanWebpack
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+task generateJavadoc(type: Javadoc) {
+    source = sourceSets.main.allJava
+    classpath += configurations.compileClasspath
+    options.encoding = 'UTF-8'
+    options.charSet = 'UTF-8'
+    options.author = true
+    options.version = project.version
+    options.links('https://docs.oracle.com/javase/8/docs/api/')
+    destinationDir = file("$buildDir/javadoc")
+}

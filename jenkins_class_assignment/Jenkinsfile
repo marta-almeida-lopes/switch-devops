@@ -1,0 +1,78 @@
+	pipeline {
+  agent any
+
+  stages {
+    stage('Checkout') {
+      steps {
+        echo 'Checking out...'
+         git credentialsId: 'mal-bitbucket-credentials', url: 'https://marta_lopes@bitbucket.org/marta_lopes/devops-22-23-maal-1221850-jenkins'
+      }
+    }
+    
+    stage('Build') {
+      steps {
+        echo 'Building...'
+        dir('CA2/Part2/react-and-spring-data-rest-basic') {
+          sh 'chmod +x gradlew'
+          sh './gradlew clean assemble'
+        }
+      }
+    }
+
+    stage('Test') {
+        steps {
+            echo 'Running tests...'
+            dir('CA2/Part2/react-and-spring-data-rest-basic') {
+            sh 'chmod +x gradlew'
+            sh './gradlew test'
+            }
+        }
+    }
+
+    stage('Generate Javadoc') {
+        steps {
+            echo 'Generating Javadoc...'
+            dir('CA2/Part2/react-and-spring-data-rest-basic') {
+            sh 'chmod +x gradlew'
+            sh './gradlew generateJavadoc'
+            }
+            archiveArtifacts artifacts: 'CA2/Part2/react-and-spring-data-rest-basic/build/javadoc/**/*', fingerprint: true
+        }
+    }
+
+    stage('Archiving') {
+        steps {
+            echo 'Archiving...'
+            archiveArtifacts artifacts: 'CA2/Part2/react-and-spring-data-rest-basic/build/libs/*'
+        }
+    }
+
+    stage('Publish Image') {
+        steps {
+            echo 'Publishing Docker image...'
+            dir('CA2/Part2/react-and-spring-data-rest-basic') {
+                withCredentials([usernamePassword(credentialsId: 'mal-dockerhub-credentials', usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_PASSWORD')]) {
+                    sh "docker build -t martalopes/tomcat:${env.BUILD_NUMBER} ."
+                    sh "docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD"
+                    sh "docker push martalopes/tomcat:${env.BUILD_NUMBER}"
+                    sh "docker logout"
+                }
+            }
+        }
+    }
+}
+
+post {
+  always {
+    publishHTML(target: [
+      allowMissing: false,
+      alwaysLinkToLastBuild: false,
+      keepAll: true,
+      reportDir: 'CA2/Part2/react-and-spring-data-rest-basic/build/javadoc',
+      reportFiles: 'index.html',
+      reportName: 'Javadoc'
+    ])
+  }
+}
+
+    }
