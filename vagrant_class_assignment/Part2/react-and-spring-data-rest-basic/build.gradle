@@ -1,0 +1,70 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '2.7.10'
+    id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+    id 'org.siouan.frontend-jdk11' version '6.0.0'
+    id 'war'
+}
+
+group = 'com.greglturnquist'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-data-rest'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    runtimeOnly 'com.h2database:h2'
+    testImplementation('org.springframework.boot:spring-boot-starter-test') {
+        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+    }
+    // To support war file for deploying to tomcat
+    providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+    implementation 'javax.validation:validation-api:2.0.1.Final'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+task copyJar(type: Copy) {
+    from 'build/libs/'
+    into 'disc'
+    include '*.jar'
+}
+task deleteWebpack (type: Delete){
+    delete '/src/main/resources/static/built'
+}
+
+clean.dependsOn deleteWebpack
+
+
+frontend {
+    nodeVersion = "14.17.3"
+
+    System.out.println(String.format("I am running on: %s(%s)", System.getProperty("os.arch"), System.getProperty("os.name")))
+
+    if (System.getProperty("os.arch").equals("aarch64")) {
+        if (System.getProperty("os.name").equals("Linux")) {
+            nodeDistributionUrlPathPattern = 'vVERSION/node-vVERSION-linux-arm64.TYPE'
+        }
+
+        if (System.getProperty("os.name").equals("Mac OS X")) {
+            nodeDistributionUrlPathPattern.set("vVERSION/node-vVERSION-darwin-x64.TYPE")
+        }
+    }
+
+    // See 'scripts' section in your 'package.json file'
+    //cleanScript = 'run clean'
+    //assembleScript = 'run assemble'
+    assembleScript = 'run webpack'
+    //checkScript = 'run check'
+
+    //assembleScript = "run build"
+
+}
